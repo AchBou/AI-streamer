@@ -55,8 +55,7 @@ let scene, camera, renderer, controls, currentVrm;
 let currentExpression = null;
 let currentPose = null;
 let currentAnimation = null;
-let poseAnimationMixer = null;
-let poseAction = null;
+
 
 let currentAnimationUrl = undefined;
 let currentMixer = undefined;
@@ -241,8 +240,8 @@ function animate() {
         currentVrm.update( deltaTime );
 
         // Handle any animation updates for poses
-        if (poseAnimationMixer) {
-            poseAnimationMixer.update(deltaTime);
+        if (currentMixer) {
+            currentMixer.update(deltaTime);
         }
 
         // Update humanoid animations
@@ -281,7 +280,7 @@ function loadVRM(url) {
 
     // Create a loader with VRM plugin
     const loader = new GLTFLoader();
-    loader.register((parser) => new VRMLoaderPlugin(parser, { helperRoot: helperRoot, autoUpdateHumanBones: true }));
+    loader.register((parser) => new VRMLoaderPlugin(parser));
 
     // Load the model
     loader.load(
@@ -345,6 +344,8 @@ async function loadFBX( animationUrl ) {
 
     if ( currentMixer ) {
 
+
+        console.log(animationUrl);
         // Load animation
         const clip = await loadMixamoAnimation( animationUrl, currentVrm );
 
@@ -363,8 +364,6 @@ async function loadFBX( animationUrl ) {
 
 }
 
-// Functions for expressions and poses are now imported from separate modules
-
 // Create a clock for animation
 const clock = new THREE.Clock();
 
@@ -376,6 +375,9 @@ loadingEl.style.display = 'block';
 
 // Automatically load the VRM model from the models folder
 loadVRM('./models/model1.vrm');
+
+const axesHelper = new THREE.AxesHelper( 5 );
+scene.add( axesHelper );
 
 // dnd handler
 window.addEventListener( 'dragover', function ( event ) {
