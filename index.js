@@ -20,6 +20,8 @@ import { loadMixamoAnimation } from "./loadMixamoAnimation";
 const loadingEl = document.getElementById('loading');
 const fileInputEl = document.getElementById('file-input');
 const controlsContainer = document.getElementById('controls-container');
+const modelButtonsContainer = document.getElementById('model-buttons');
+const fbxButtonsContainer = document.getElementById('fbx-buttons');
 
 // Expression and pose buttons
 const expressionButtons = {
@@ -45,6 +47,14 @@ const animationButtons = {
     run: document.getElementById('animation-run'),
     stop: document.getElementById('animation-stop')
 };
+
+// Model buttons - initially just the one we know exists
+const modelButtons = {
+    model1: document.getElementById('model-model1')
+};
+
+// FBX animation buttons will be populated dynamically
+const fbxButtons = {};
 
 const resetAllButton = document.getElementById('reset-all');
 
@@ -209,6 +219,128 @@ function init() {
         // Set neutral as active
         expressionButtons.neutral.classList.add('active');
     });
+
+    // Add event listeners for model buttons
+    Object.keys(modelButtons).forEach(modelName => {
+        modelButtons[modelName].addEventListener('click', () => {
+            // Load the selected model
+            loadVRM(`./models/${modelName}.vrm`);
+
+            // Update UI
+            Object.keys(modelButtons).forEach(key => {
+                modelButtons[key].classList.remove('active');
+            });
+
+            modelButtons[modelName].classList.add('active');
+        });
+    });
+
+    // In a real application, you would implement code here to scan the models folder
+    // and create buttons for each VRM file found in the folder.
+    // This could be done through a server-side API, a build process, or a static JSON file
+    // that's generated during the build process.
+    //
+    // Example implementation (pseudo-code):
+    // 
+    // fetch('./models-list.json')
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         data.forEach(model => {
+    //             if (!modelButtons[model.name]) {
+    //                 // Create a button element
+    //                 const button = document.createElement('button');
+    //                 button.id = `model-${model.name}`;
+    //                 button.textContent = model.name.charAt(0).toUpperCase() + model.name.slice(1);
+    //                 
+    //                 // Add event listener
+    //                 button.addEventListener('click', () => {
+    //                     loadVRM(`./models/${model.file}`);
+    //                     
+    //                     // Update UI
+    //                     Object.keys(modelButtons).forEach(key => {
+    //                         modelButtons[key].classList.remove('active');
+    //                     });
+    //                     
+    //                     button.classList.add('active');
+    //                 });
+    //                 
+    //                 // Add to container and store reference
+    //                 modelButtonsContainer.appendChild(button);
+    //                 modelButtons[model.name] = button;
+    //             }
+    //         });
+    //     })
+    //     .catch(error => {
+    //         console.error('Error loading models list:', error);
+    //     });
+    //
+    // For now, we'll just use the existing model button and drag and drop functionality.
+
+    // Scan animations folder and create buttons for FBX files
+    // This is a simplified approach - in a real app, you'd use a server-side API
+    // to get the list of files in the folder
+    const animationFiles = [
+        // Add any known animation files here
+        // Example: { name: 'walk', file: 'walk.fbx' }
+    ];
+
+    // In a real application, you would implement code here to scan the animations folder
+    // and populate the animationFiles array with the FBX files found in the folder.
+    // This could be done through a server-side API, a build process, or a static JSON file
+    // that's generated during the build process.
+    //
+    // Example implementation (pseudo-code):
+    // 
+    // fetch('./animations-list.json')
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         data.forEach(animation => {
+    //             animationFiles.push({
+    //                 name: animation.name,
+    //                 file: animation.file
+    //             });
+    //         });
+    //         
+    //         // Create buttons for each animation file
+    //         createAnimationButtons();
+    //     })
+    //     .catch(error => {
+    //         console.error('Error loading animations list:', error);
+    //     });
+    //
+    // For now, we'll just use the drag and drop functionality to add animations.
+
+    // Create buttons for each animation file
+    animationFiles.forEach(animation => {
+        // Create a button element
+        const button = document.createElement('button');
+        button.id = `fbx-${animation.name}`;
+        button.textContent = animation.name.charAt(0).toUpperCase() + animation.name.slice(1);
+
+        // Add event listener
+        button.addEventListener('click', () => {
+            loadFBX(`./animations/${animation.file}`);
+
+            // Update UI
+            Object.keys(fbxButtons).forEach(key => {
+                fbxButtons[key].classList.remove('active');
+            });
+
+            button.classList.add('active');
+        });
+
+        // Add to container and store reference
+        fbxButtonsContainer.appendChild(button);
+        fbxButtons[animation.name] = button;
+    });
+
+    // If no animation files were found, show a message
+    if (animationFiles.length === 0) {
+        const infoText = document.createElement('div');
+        infoText.className = 'info-text';
+        infoText.textContent = 'Drop FBX files in the animations folder and restart the app to see them here';
+        fbxButtonsContainer.appendChild(infoText);
+    }
 
     // Hide the loading indicator initially
     loadingEl.style.display = 'none';
@@ -385,7 +517,6 @@ window.addEventListener( 'dragover', function ( event ) {
 } );
 
 window.addEventListener( 'drop', function ( event ) {
-
     event.preventDefault();
 
     // read given file then convert it to blob url
@@ -396,19 +527,95 @@ window.addEventListener( 'drop', function ( event ) {
     if ( ! file ) return;
 
     const fileType = file.name.split( '.' ).pop();
+    const fileName = file.name;
     const blob = new Blob( [ file ], { type: 'application/octet-stream' } );
     const url = URL.createObjectURL( blob );
 
     if ( fileType === 'fbx' ) {
-
+        // Load the FBX animation
         loadFBX( url );
 
-    } else {
+        // Create a button for this animation if it doesn't exist
+        const animationName = fileName.replace('.fbx', '');
+        if (!fbxButtons[animationName]) {
+            // Create a button element
+            const button = document.createElement('button');
+            button.id = `fbx-${animationName}`;
+            button.textContent = animationName.charAt(0).toUpperCase() + animationName.slice(1);
 
+            // Add event listener
+            button.addEventListener('click', () => {
+                loadFBX(url);
+
+                // Update UI
+                Object.keys(fbxButtons).forEach(key => {
+                    fbxButtons[key].classList.remove('active');
+                });
+
+                button.classList.add('active');
+            });
+
+            // Remove any info text
+            const infoText = fbxButtonsContainer.querySelector('.info-text');
+            if (infoText) {
+                fbxButtonsContainer.removeChild(infoText);
+            }
+
+            // Add to container and store reference
+            fbxButtonsContainer.appendChild(button);
+            fbxButtons[animationName] = button;
+
+            // Set as active
+            button.classList.add('active');
+        } else {
+            // Update UI to show this animation as active
+            Object.keys(fbxButtons).forEach(key => {
+                fbxButtons[key].classList.remove('active');
+            });
+
+            fbxButtons[animationName].classList.add('active');
+        }
+    } else if (fileType === 'vrm') {
+        // Load the VRM model
         loadVRM( url );
 
-    }
+        // Create a button for this model if it doesn't exist
+        const modelName = fileName.replace('.vrm', '');
+        if (!modelButtons[modelName]) {
+            // Create a button element
+            const button = document.createElement('button');
+            button.id = `model-${modelName}`;
+            button.textContent = modelName.charAt(0).toUpperCase() + modelName.slice(1);
 
+            // Add event listener
+            button.addEventListener('click', () => {
+                loadVRM(url);
+
+                // Update UI
+                Object.keys(modelButtons).forEach(key => {
+                    modelButtons[key].classList.remove('active');
+                });
+
+                button.classList.add('active');
+            });
+
+            // Add to container and store reference
+            modelButtonsContainer.appendChild(button);
+            modelButtons[modelName] = button;
+
+            // Set as active
+            button.classList.add('active');
+        } else {
+            // Update UI to show this model as active
+            Object.keys(modelButtons).forEach(key => {
+                modelButtons[key].classList.remove('active');
+            });
+
+            modelButtons[modelName].classList.add('active');
+        }
+    } else {
+        console.warn('Unsupported file type:', fileType);
+    }
 } );
 
 console.log('VRM Model Viewer initialized ✨');
