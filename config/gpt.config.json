@@ -1,0 +1,9 @@
+{
+    "cooldownPeriod": 10000,
+    "animationTriggers": {
+        "greeting": ["hello", "hi", "hey", "greetings"],
+        "celebration": ["congrats", "congratulations", "amazing", "wow"],
+        "sad": ["sad", "sorry", "unfortunate"],
+        "laugh": ["lol", "haha", "funny", "joke"]
+    }
+}

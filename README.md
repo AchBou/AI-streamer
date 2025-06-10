@@ -14,6 +14,9 @@ VRM is a file format for handling 3D humanoid avatar data for VR applications. I
 - File input to load your own VRM models
 - Facial expressions (happy, angry, sad, surprised, relaxed)
 - Pose animations (T-pose, wave, bow, jump, dance)
+- Twitch chat integration
+- OpenAI GPT integration for automated responses
+- Server-side API for secure OpenAI interactions
 
 ## Prerequisites
 
@@ -32,13 +35,45 @@ npm install
 
 ## Development
 
-To start the development server:
+### Client-Only Mode
+
+To start the development server for the client only:
 
 ```bash
 npm start
 ```
 
 This will open the application in your default web browser. The page will automatically reload if you make changes to the code.
+
+### Server Setup
+
+Before running the server, you need to set up your environment variables:
+
+1. Create a `.env` file in the root directory (or rename the `.env.example` file)
+2. Add your OpenAI API key to the `.env` file:
+
+```
+OPENAI_API_KEY=your_openai_api_key_here
+PORT=3000
+```
+
+### Running the Server
+
+To start the server only:
+
+```bash
+npm run server
+```
+
+### Running Both Client and Server
+
+To run both the client and server concurrently:
+
+```bash
+npm run dev
+```
+
+This will start both the webpack dev server for the client and the Express server for the OpenAI API.
 
 ## Building for Production
 
@@ -76,7 +111,35 @@ You can find VRM models from various sources:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## OpenAI Integration
+
+This project includes integration with OpenAI's GPT models to generate responses to Twitch chat messages. The integration works as follows:
+
+1. When a message is received in the Twitch chat, it's sent to the server
+2. The server processes the message and decides whether to generate a response based on:
+   - Cooldown period (to avoid spamming)
+   - Response threshold (random chance to respond)
+   - Message filtering (ignoring commands and specific users)
+3. If a response should be generated, the server sends a request to the OpenAI API
+4. The response is sent back to the client and displayed in the chat
+
+The server-side implementation ensures that your OpenAI API key is kept secure and not exposed in client-side code.
+
+### Configuration
+
+You can configure the OpenAI integration by editing the `config/gpt.config.js` file. This includes settings for:
+
+- Model selection (gpt-3.5-turbo, gpt-4, etc.)
+- Response parameters (max tokens, temperature)
+- Bot personality (system prompt)
+- Response behavior (threshold, cooldown)
+- Message filtering (ignore commands, ignore users)
+- Animation triggers (words that trigger specific animations)
+
 ## Acknowledgments
 
 - [Three.js](https://threejs.org/) - JavaScript 3D library
 - [@pixiv/three-vrm](https://github.com/pixiv/three-vrm) - VRM file loader and utilities for Three.js
+- [OpenAI](https://openai.com/) - AI models for chat responses
+- [Express](https://expressjs.com/) - Web server framework
+- [tmi.js](https://tmijs.com/) - Twitch messaging interface
