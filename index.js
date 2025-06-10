@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { CubeTextureLoader } from 'three/src/loaders/CubeTextureLoader.js';
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 import { setExpression } from './expressions.js';
 import { setPose, resetPose } from './poses.js';
@@ -18,7 +19,6 @@ import { loadMixamoAnimation } from "./loadMixamoAnimation";
 
 // DOM elements
 const loadingEl = document.getElementById('loading');
-const fileInputEl = document.getElementById('file-input');
 const controlsContainer = document.getElementById('controls-container');
 const modelButtonsContainer = document.getElementById('model-buttons');
 const fbxButtonsContainer = document.getElementById('fbx-buttons');
@@ -86,7 +86,7 @@ function init() {
     camera.position.set(0, 1.5, 3);
 
     // Create renderer
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -110,15 +110,41 @@ function init() {
     controls.minDistance = 1;
     controls.maxDistance = 10;
 
-    // Add grid helper
-    const gridHelper = new THREE.GridHelper(10, 10);
-    scene.add(gridHelper);
+    // Load skybox textures
+    const loadSkybox = () => {
+        const loader = new CubeTextureLoader();
+        const path = './skybox/';
+        const format = '.jpg';
+        const urls = [
+            path + 'px' + format, // positive x
+            path + 'nx' + format, // negative x
+            path + 'py' + format, // positive y
+            path + 'ny' + format, // negative y
+            path + 'pz' + format, // positive z
+            path + 'nz' + format  // negative z
+        ];
+
+        loader.load(urls, (cubeTexture) => {
+            scene.background = cubeTexture;
+            console.log('Skybox loaded successfully');
+        }, undefined, (error) => {
+            console.warn('Failed to load skybox textures:', error);
+            // Fallback to solid color background
+            scene.background = new THREE.Color(0x87CEEB); // Light sky blue
+        });
+    };
+
+    // Try to load skybox, fallback to solid color if textures not available
+    try {
+        loadSkybox();
+    } catch (error) {
+        console.warn('Error setting up skybox:', error);
+        scene.background = new THREE.Color(0x87CEEB); // Light sky blue
+    }
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
 
-    // Handle file input
-    fileInputEl.addEventListener('change', handleFileSelect);
 
     // Add event listeners for expression buttons
     Object.keys(expressionButtons).forEach(expressionName => {
@@ -218,6 +244,18 @@ function init() {
 
         // Set neutral as active
         expressionButtons.neutral.classList.add('active');
+
+        // Restart the silly dancing animation
+        loadFBX('./animations/silly-dancing.fbx');
+
+        // Update UI to show the dance animation as active
+        Object.keys(fbxButtons).forEach(key => {
+            fbxButtons[key].classList.remove('active');
+        });
+
+        if (fbxButtons['dance']) {
+            fbxButtons['dance'].classList.add('active');
+        }
     });
 
     // Add event listeners for model buttons
@@ -232,6 +270,9 @@ function init() {
             });
 
             modelButtons[modelName].classList.add('active');
+
+            // Note: The loadVRM function will automatically start the silly dancing animation
+            // as we've updated it to do so after loading the model
         });
     });
 
@@ -281,34 +322,9 @@ function init() {
     // to get the list of files in the folder
     const animationFiles = [
         // Add any known animation files here
-        // Example: { name: 'walk', file: 'walk.fbx' }
+        { name: 'dance', file: 'silly-dancing.fbx' },
+        { name: 'angry', file: 'Angry.fbx' }
     ];
-
-    // In a real application, you would implement code here to scan the animations folder
-    // and populate the animationFiles array with the FBX files found in the folder.
-    // This could be done through a server-side API, a build process, or a static JSON file
-    // that's generated during the build process.
-    //
-    // Example implementation (pseudo-code):
-    // 
-    // fetch('./animations-list.json')
-    //     .then(response => response.json())
-    //     .then(data => {
-    //         data.forEach(animation => {
-    //             animationFiles.push({
-    //                 name: animation.name,
-    //                 file: animation.file
-    //             });
-    //         });
-    //         
-    //         // Create buttons for each animation file
-    //         createAnimationButtons();
-    //     })
-    //     .catch(error => {
-    //         console.error('Error loading animations list:', error);
-    //     });
-    //
-    // For now, we'll just use the drag and drop functionality to add animations.
 
     // Create buttons for each animation file
     animationFiles.forEach(animation => {
@@ -383,20 +399,6 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Handle file selection
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    loadingEl.style.display = 'block';
-
-    // Create a URL for the file
-    const fileURL = URL.createObjectURL(file);
-
-    // Load the VRM model
-    loadVRM(fileURL);
-}
-
 // Load VRM model
 function loadVRM(url) {
     // Remove the previous VRM model if it exists
@@ -405,9 +407,6 @@ function loadVRM(url) {
         VRMUtils.deepDispose( currentVrm.scene );
     }
 
-    const helperRoot = new THREE.Group();
-    helperRoot.renderOrder = 10000;
-    scene.add( helperRoot );
 
 
     // Create a loader with VRM plugin
@@ -452,11 +451,20 @@ function loadVRM(url) {
             // Hide loading indicator
             loadingEl.style.display = 'none';
 
-            // Show controls
-            controlsContainer.style.display = 'flex';
-
             // Set a neutral expression as active initially
             expressionButtons.neutral.classList.add('active');
+
+            // Automatically start with silly dancing animation
+            loadFBX('./animations/silly-dancing.fbx');
+
+            // Update UI to show the dance animation as active
+            Object.keys(fbxButtons).forEach(key => {
+                fbxButtons[key].classList.remove('active');
+            });
+
+            if (fbxButtons['dance']) {
+                fbxButtons['dance'].classList.add('active');
+            }
         },
         (progress) => {
             // Update loading progress if needed
@@ -508,8 +516,6 @@ loadingEl.style.display = 'block';
 // Automatically load the VRM model from the models folder
 loadVRM('./models/model1.vrm');
 
-const axesHelper = new THREE.AxesHelper( 5 );
-scene.add( axesHelper );
 
 // dnd handler
 window.addEventListener( 'dragover', function ( event ) {
@@ -597,6 +603,9 @@ window.addEventListener( 'drop', function ( event ) {
                 });
 
                 button.classList.add('active');
+
+                // Note: The loadVRM function will automatically start the silly dancing animation
+                // as we've updated it to do so after loading the model
             });
 
             // Add to container and store reference
@@ -613,6 +622,9 @@ window.addEventListener( 'drop', function ( event ) {
 
             modelButtons[modelName].classList.add('active');
         }
+
+        // Note: The loadVRM function will automatically start the silly dancing animation
+        // as we've updated it to do so after loading the model
     } else {
         console.warn('Unsupported file type:', fileType);
     }

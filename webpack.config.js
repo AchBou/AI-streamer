@@ -20,10 +20,12 @@ module.exports = {
       template: './index.html',
       filename: 'index.html',
     }),
-    // Copy sample VRM models to the dist folder
+    // Copy sample VRM models, animations, and skybox textures to the dist folder
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'models', to: 'models' }
+        { from: 'models', to: 'models' },
+        { from: 'skybox', to: 'skybox' },
+        { from: 'animations', to: 'animations' }
       ],
     }),
   ],
